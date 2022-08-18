@@ -32,14 +32,6 @@ const char* OUTLOG = "output.log";
 const char* FUZZDAT = "ats.txt";
 int device_fd = -1;
 
-/*typedef struct DeviceID
-{
-	const int VID; //VidSamsung	= 0x04E8
-	const int PID; //PidGalaxyS2 = 0x685D
-} t_deviceID;*/
-
-
-
 struct
 {
 
@@ -63,10 +55,6 @@ fzorc[] =
      {"",";",""}, //8
      {"",">",""}, //9
      {"","",""}
-
-   //  {"", "=%d,%s,"},
-    // {"", "=1,\"%s\","}
-
     
      
 };
@@ -85,7 +73,7 @@ void close_dev(size_t);
 
 
 
-//writes data to file, not needed as of now
+//writes data to file
 void write_file(const unsigned char* data)
 {
 	ssize_t fd = open(OUTLOG, O_WRONLY | O_CREAT | O_TRUNC | O_APPEND, 0666);
@@ -200,7 +188,7 @@ int open_dev(const char* device, size_t baud, int blocking)
  
   init_tty(device_fd, baud, 0);
   set_blocking (device_fd, blocking);
-  printf("[+]Device %s opened\n", device);
+  printf("[open_dev]Device %s opened\n", device);
 
   return 0;
 }
@@ -236,9 +224,9 @@ int read_at(ssize_t device, unsigned char* buf, size_t bufsz)
 //close device descriptor
 void close_dev(size_t device)
 {
-	printf("\n[!]Closing device %s\n", INTFC);
+	printf("\n[close_dev]Closing device %s\n", INTFC);
 	close(device);
-	printf("[!]Closed\n");
+	printf("[close_dev]Closed\n");
 
 }
 
@@ -248,7 +236,7 @@ void *ermall(size_t size)
 	void *ptr;
 	ptr = malloc(size);
 	if(ptr == NULL)
-	  perror("malloc failed");
+	  perror("[err] malloc failed\n");
 	return ptr;
 }
 //clean up the output remove LF
@@ -270,18 +258,18 @@ void denl(char* ptr)
 
 
 
-void writelog(FILE* fout, char* temp, size_t resp, unsigned char* buff) //unsigned char* [] buff)
+void writelog(FILE* fout, char* temp, size_t resp, unsigned char* buff)
 {
 	
-	struct timeval tp;
+    struct timeval tp;
     gettimeofday(&tp, 0);
     time_t curtime = tp.tv_sec;
     struct tm *t = localtime(&curtime);
     
     fflush(fout);
-	fprintf(fout,"\n[%02d:%02d:%02d:%03ld] Sent command:%s",t->tm_hour, t->tm_min, t->tm_sec, tp.tv_usec/1000, temp); //line
-	fprintf(fout, "\n[%02d:%02d:%02d:%03ld] Got %ld bytes response:%s", t->tm_hour, t->tm_min, t->tm_sec, tp.tv_usec/1000, resp, buff);
-	fprintf(fout,"\n+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n");
+    fprintf(fout,"\n[%02d:%02d:%02d:%03ld] Sent command:%s",t->tm_hour, t->tm_min, t->tm_sec, tp.tv_usec/1000, temp); //line
+    fprintf(fout, "\n[%02d:%02d:%02d:%03ld] Got %ld bytes response:%s", t->tm_hour, t->tm_min, t->tm_sec, tp.tv_usec/1000, resp, buff);
+    fprintf(fout,"\n+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n");
 	
 	
 }
@@ -298,7 +286,7 @@ void communicate(char* temp, FILE* fout)
 	resp = read_at(device_fd, buff, MAX_SIZE-1);
 	denl(buff);
 
-	printf("\n[+] Got %ld bytes response: %s", resp, buff);
+	printf("\n[com] Got %ld bytes response: %s", resp, buff);
 
 	/* writing command and response to logfile */
 	//if(fout != NULL)
@@ -313,7 +301,7 @@ void communicate(char* temp, FILE* fout)
 	}
 }
 
-//int is_dev_present ()
+//TODO: int is_dev_present ()
 
 int main(int argc, char* argv[])
 {	
@@ -327,8 +315,8 @@ int main(int argc, char* argv[])
 			perror("malloc");
 		}
 	}
-	//unsigned char buff[MAX_SIZE] = {0}; /*holds response*/
-	size_t resp = 0; /*resp = strlen(buff)*/
+	//unsigned char buff[MAX_SIZE] = {0}; //holds response
+	size_t resp = 0; //resp = strlen(buff)
 
 	size_t i = 0;
 	size_t loop = 0;
@@ -341,16 +329,16 @@ int main(int argc, char* argv[])
 	
 
  	/* parameters for readline() - needed to parse input file line by line */
-	char* line = NULL; /*line of text in ats.txt*/
-	size_t len = 0; /*vars: len = strlen(line), resp = strlen(buff), isFreed - kinda boolean*/
-	FILE* fin; /*filestram for input data*/
-	ssize_t err = -1; /* check return value of readline() */
+	char* line = NULL; //line of text in ats.txt
+	size_t len = 0; //vars: len = strlen(line), resp = strlen(buff), isFreed - kinda boolean
+	FILE* fin; //filestram for input data
+	ssize_t err = -1; //check return value of readline() 
 	
 
-	size_t isFreed = 0;/*isFreed - kinda boolean*/
+	size_t isFreed = 0;
 	
    	
-	if(open_dev(INTFC, B9600, 0) == -1) /* open device, at baudrate 9600,  blocking mode = 0 */
+	if(open_dev(INTFC, B9600, 0) == -1) //open device, at baudrate 9600,  blocking mode = 0
 	{   
 		return -1;
 	}
@@ -360,7 +348,7 @@ int main(int argc, char* argv[])
 	if(fin == NULL)
 		perror("[read]: IN_fopen");
 
-   //open output.log file for logging
+   	//open output.log file for logging
 	FILE* fout;
 	fout = fopen(OUTLOG, "a+");
 	if(fout == NULL)
@@ -371,7 +359,7 @@ int main(int argc, char* argv[])
  	fdrand = fopen("/dev/urandom", "r");
 	if(fdrand == NULL)
 		perror("frand");
-while ((err = getline(&line, &len,fin)) != -1)
+	while ((err = getline(&line, &len,fin)) != -1)
 	{		
 			if(errno == EINVAL || errno == ENOMEM)
 			{
@@ -676,39 +664,3 @@ while ((err = getline(&line, &len,fin)) != -1)
 
 
 }
-/*Activation of an IP PDP context
-AT +CGDCONT=1, "IP", "internet"; +GCDCONT=2, "IP", "abc.com"
-OK
-ATD*99***1#
-CONNECT
-
-Other example:
-AT +CGCLASS=”CG”
-OK
-+CGREG: 1
-AT +CGDCONT=1, "IP", "internet"
-OK
-AT +CGQREQ=1,1,4,5,2,14
-OK
-AT +CGQMIN=1,1,4,5,2,14
-OK
-AT +CGATT=1
-OK
-AT +CGACT=1,1
-OK
-//Remark about +CGDATA: the goal of this command is the same than ATD*99*** so, the best will be to use only/
-/ATD*99***
-AT +CGDATA=1
-CONNECT
-.......
-Data transfert
-.......
-+CGEV: NW DETACH
-
-Network request
-AT+CGAUTO=0
-OK+CRING: GPRS "IP", "123.123.123.123"
-AT+CGANS=1
-CONNECT
-.......
-Data transfer*/
